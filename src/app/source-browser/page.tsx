@@ -46,7 +46,6 @@ function SourceBrowserPageClient() {
       : currentSourceConfig?.name || currentSource;
 
   const selectedCategory = useMemo(() => {
-    if (!selectedCategoryId) return null;
     return (
       sourceCategories.find(
         (category) => String(category.type_id) === selectedCategoryId,

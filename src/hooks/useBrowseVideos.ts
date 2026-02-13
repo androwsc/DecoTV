@@ -12,11 +12,7 @@ export interface BrowseVideoItem {
 
 interface SourceVideoListResponse {
   list?: BrowseVideoItem[];
-  page?: number | string;
-  pagecount?: number | string;
   total?: number | string;
-  limit?: number | string;
-  page_size?: number | string;
 }
 
 interface UseBrowseVideosOptions {
@@ -24,7 +20,6 @@ interface UseBrowseVideosOptions {
   sourceApi?: string | null;
   categoryId?: string | null;
   enabled?: boolean;
-  defaultPageSize?: number;
 }
 
 interface UseBrowseVideosResult {
@@ -95,43 +90,12 @@ function parseNonNegativeInteger(value: unknown): number | null {
   return null;
 }
 
-function parsePositiveInteger(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-    return Math.floor(value);
-  }
-  if (typeof value === 'string') {
-    const parsed = Number.parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-  return null;
-}
-
 function inferHasMore(
   payload: SourceVideoListResponse,
-  requestedPage: number,
-  fetchedCount: number,
   currentVideoCount: number,
-  defaultPageSize: number,
 ): boolean {
   const total = parseNonNegativeInteger(payload.total);
-  if (total !== null) {
-    return currentVideoCount < total;
-  }
-
-  const pageCount = parsePositiveInteger(payload.pagecount);
-  if (pageCount !== null) {
-    const responsePage = parsePositiveInteger(payload.page) ?? requestedPage;
-    return responsePage < pageCount;
-  }
-
-  const pageSize =
-    parsePositiveInteger(payload.limit) ??
-    parsePositiveInteger(payload.page_size) ??
-    defaultPageSize;
-
-  return fetchedCount >= pageSize;
+  return total !== null && currentVideoCount < total;
 }
 
 function mergeUniqueItems(
@@ -151,7 +115,6 @@ export default function useBrowseVideos({
   sourceApi,
   categoryId,
   enabled = true,
-  defaultPageSize = 20,
 }: UseBrowseVideosOptions): UseBrowseVideosResult {
   const [videos, setVideos] = useState<BrowseVideoItem[]>([]);
   const [page, setPage] = useState(1);
@@ -197,6 +160,15 @@ export default function useBrowseVideos({
     setError('');
   }, []);
 
+  const abortAndResetState = useCallback(() => {
+    // Keep category/source switch deterministic:
+    // abort in-flight request -> clear list -> reset page cursor to 1.
+    requestControllerRef.current?.abort();
+    requestControllerRef.current = null;
+    requestSequenceRef.current += 1;
+    resetState();
+  }, [resetState]);
+
   const fetchPage = useCallback(
     async (targetPage: number) => {
       if (!enabled || sourceKey === 'auto' || !sourceApi || !queryKey) {
@@ -215,6 +187,9 @@ export default function useBrowseVideos({
         isLoadingMoreRef.current = true;
         setIsLoadingMore(true);
       } else {
+        loadMoreLockRef.current = false;
+        isLoadingMoreRef.current = false;
+        setIsLoadingMore(false);
         isLoadingRef.current = true;
         setIsLoading(true);
       }
@@ -244,13 +219,7 @@ export default function useBrowseVideos({
         const mergedVideos = isLoadMore
           ? mergeUniqueItems(videosRef.current, nextItems)
           : nextItems;
-        const nextHasMore = inferHasMore(
-          payload,
-          targetPage,
-          nextItems.length,
-          mergedVideos.length,
-          defaultPageSize,
-        );
+        const nextHasMore = inferHasMore(payload, mergedVideos.length);
 
         if (
           controller.signal.aborted ||
@@ -268,7 +237,11 @@ export default function useBrowseVideos({
         setPage(targetPage);
         setHasMore(nextHasMore);
       } catch (err) {
-        if (controller.signal.aborted) {
+        if (
+          controller.signal.aborted ||
+          requestSequence !== requestSequenceRef.current ||
+          latestQueryKeyRef.current !== queryKey
+        ) {
           return;
         }
 
@@ -286,24 +259,24 @@ export default function useBrowseVideos({
         if (requestControllerRef.current === controller) {
           requestControllerRef.current = null;
         }
-        if (isLoadMore) {
-          loadMoreLockRef.current = false;
-          isLoadingMoreRef.current = false;
-          setIsLoadingMore(false);
-        } else {
-          isLoadingRef.current = false;
-          setIsLoading(false);
+
+        const isStaleRequest =
+          requestSequence !== requestSequenceRef.current ||
+          latestQueryKeyRef.current !== queryKey;
+
+        if (!isStaleRequest) {
+          if (isLoadMore) {
+            loadMoreLockRef.current = false;
+            isLoadingMoreRef.current = false;
+            setIsLoadingMore(false);
+          } else {
+            isLoadingRef.current = false;
+            setIsLoading(false);
+          }
         }
       }
     },
-    [
-      defaultPageSize,
-      enabled,
-      normalizedCategoryId,
-      queryKey,
-      sourceApi,
-      sourceKey,
-    ],
+    [enabled, normalizedCategoryId, queryKey, sourceApi, sourceKey],
   );
 
   const loadMore = useCallback(() => {
@@ -330,10 +303,7 @@ export default function useBrowseVideos({
 
   useEffect(() => {
     latestQueryKeyRef.current = queryKey;
-    requestControllerRef.current?.abort();
-    requestSequenceRef.current += 1;
-
-    resetState();
+    abortAndResetState();
 
     if (!enabled || sourceKey === 'auto' || !sourceApi) {
       hasMoreRef.current = false;
@@ -346,7 +316,7 @@ export default function useBrowseVideos({
     return () => {
       requestControllerRef.current?.abort();
     };
-  }, [enabled, fetchPage, queryKey, resetState, sourceApi, sourceKey]);
+  }, [abortAndResetState, enabled, fetchPage, queryKey, sourceApi, sourceKey]);
 
   useEffect(() => {
     return () => {

@@ -37,6 +37,8 @@ function DoubanPageClient() {
   const loadMoreLockRef = useRef(false);
 
   const type = searchParams.get('type') || 'movie';
+  const DOUBAN_PAGE_SIZE = 25;
+  const GRID_OVERSCAN = 2000;
 
   // === 智能防抖追踪（必须在 type 定义之后）===
   const isFirstMount = useRef(true);
@@ -271,7 +273,7 @@ function DoubanPageClient() {
           kind: 'tv' as const,
           category: type,
           type: secondarySelection,
-          pageLimit: 25,
+          pageLimit: DOUBAN_PAGE_SIZE,
           pageStart,
         };
       }
@@ -281,11 +283,11 @@ function DoubanPageClient() {
         kind: type as 'tv' | 'movie',
         category: primarySelection,
         type: secondarySelection,
-        pageLimit: 25,
+        pageLimit: DOUBAN_PAGE_SIZE,
         pageStart,
       };
     },
-    [type, primarySelection, secondarySelection],
+    [DOUBAN_PAGE_SIZE, type, primarySelection, secondarySelection],
   );
 
   // 防抖的数据加载函数 - 缓存优先 + 请求生命周期管理
@@ -410,7 +412,7 @@ function DoubanPageClient() {
           data = await getDoubanList({
             tag: selectedCategory.query,
             type: selectedCategory.type,
-            pageLimit: 25,
+            pageLimit: DOUBAN_PAGE_SIZE,
             pageStart: 0,
           });
         } else {
@@ -447,7 +449,7 @@ function DoubanPageClient() {
       } else if (type === 'anime') {
         data = await getDoubanRecommends({
           kind: primarySelection === '番剧' ? 'tv' : 'movie',
-          pageLimit: 25,
+          pageLimit: DOUBAN_PAGE_SIZE,
           pageStart: 0,
           category: '动画',
           format: primarySelection === '番剧' ? '电视剧' : '',
@@ -466,7 +468,7 @@ function DoubanPageClient() {
       } else if (primarySelection === '全部') {
         data = await getDoubanRecommends({
           kind: type === 'show' ? 'tv' : (type as 'tv' | 'movie'),
-          pageLimit: 25,
+          pageLimit: DOUBAN_PAGE_SIZE,
           pageStart: 0, // 初始数据加载始终从第一页开始
           category: multiLevelValues.type
             ? (multiLevelValues.type as string)
@@ -497,7 +499,7 @@ function DoubanPageClient() {
           // 使用 flushSync 确保状态同步更新，避免批处理延迟
           flushSync(() => {
             setDoubanData(data.list);
-            setHasMore(data.list.length !== 0);
+            setHasMore(data.list.length >= DOUBAN_PAGE_SIZE);
             setLoading(false);
           });
 
@@ -527,6 +529,7 @@ function DoubanPageClient() {
     secondarySelection,
     multiLevelValues,
     selectedWeekday,
+    DOUBAN_PAGE_SIZE,
     getRequestParams,
     customCategories,
     getDoubanData,
@@ -545,6 +548,7 @@ function DoubanPageClient() {
     // 如果当前是特定源模式，不加载豆瓣数据
     if (currentSource !== 'auto') {
       // 特定源模式下，等待用户选择分类后再加载
+      loadMoreLockRef.current = false;
       setLoading(false);
       return;
     }
@@ -593,7 +597,7 @@ function DoubanPageClient() {
 
   // 单独处理 currentPage 变化（加载更多）
   useEffect(() => {
-    if (currentPage > 0) {
+    if (currentPage > 0 && currentSource === 'auto') {
       const fetchMoreData = async () => {
         // 创建当前参数的快照
         const requestSnapshot = {
@@ -621,8 +625,8 @@ function DoubanPageClient() {
               data = await getDoubanList({
                 tag: selectedCategory.query,
                 type: selectedCategory.type,
-                pageLimit: 25,
-                pageStart: currentPage * 25,
+                pageLimit: DOUBAN_PAGE_SIZE,
+                pageStart: currentPage * DOUBAN_PAGE_SIZE,
               });
             } else {
               throw new Error('没有找到对应的分类');
@@ -637,8 +641,8 @@ function DoubanPageClient() {
           } else if (type === 'anime') {
             data = await getDoubanRecommends({
               kind: primarySelection === '番剧' ? 'tv' : 'movie',
-              pageLimit: 25,
-              pageStart: currentPage * 25,
+              pageLimit: DOUBAN_PAGE_SIZE,
+              pageStart: currentPage * DOUBAN_PAGE_SIZE,
               category: '动画',
               format: primarySelection === '番剧' ? '电视剧' : '',
               region: multiLevelValues.region
@@ -660,8 +664,8 @@ function DoubanPageClient() {
           } else if (primarySelection === '全部') {
             data = await getDoubanRecommends({
               kind: type === 'show' ? 'tv' : (type as 'tv' | 'movie'),
-              pageLimit: 25,
-              pageStart: currentPage * 25,
+              pageLimit: DOUBAN_PAGE_SIZE,
+              pageStart: currentPage * DOUBAN_PAGE_SIZE,
               category: multiLevelValues.type
                 ? (multiLevelValues.type as string)
                 : '',
@@ -684,7 +688,7 @@ function DoubanPageClient() {
             });
           } else {
             data = await getDoubanCategories(
-              getRequestParams(currentPage * 25),
+              getRequestParams(currentPage * DOUBAN_PAGE_SIZE),
             );
           }
 
@@ -695,7 +699,7 @@ function DoubanPageClient() {
 
             if (isSnapshotEqual(requestSnapshot, currentSnapshot)) {
               setDoubanData((prev) => [...prev, ...data.list]);
-              setHasMore(data.list.length !== 0);
+              setHasMore(data.list.length >= DOUBAN_PAGE_SIZE);
             } else {
               console.log('参数不一致，不执行任何操作，避免设置过期数据');
             }
@@ -714,6 +718,8 @@ function DoubanPageClient() {
     }
   }, [
     currentPage,
+    currentSource,
+    DOUBAN_PAGE_SIZE,
     type,
     primarySelection,
     secondarySelection,
@@ -724,6 +730,7 @@ function DoubanPageClient() {
 
   // 设置滚动监听
   const handleGridEndReached = useCallback(() => {
+    if (currentSource !== 'auto') return;
     if (!hasMore || isLoadingMore || loading) {
       if (!isLoadingMore) {
         loadMoreLockRef.current = false;
@@ -733,7 +740,7 @@ function DoubanPageClient() {
     if (loadMoreLockRef.current) return;
     loadMoreLockRef.current = true;
     setCurrentPage((prev) => prev + 1);
-  }, [hasMore, isLoadingMore, loading]);
+  }, [currentSource, hasMore, isLoadingMore, loading]);
 
   // 处理选择器变化
   const handlePrimaryChange = useCallback(
@@ -746,6 +753,7 @@ function DoubanPageClient() {
         setDoubanData([]);
         setHasMore(true);
         setIsLoadingMore(false);
+        loadMoreLockRef.current = false;
 
         // 清空 MultiLevelSelector 状态
         setMultiLevelValues({
@@ -797,6 +805,7 @@ function DoubanPageClient() {
         setDoubanData([]);
         setHasMore(true);
         setIsLoadingMore(false);
+        loadMoreLockRef.current = false;
         setSecondarySelection(value);
       }
     },
@@ -829,6 +838,7 @@ function DoubanPageClient() {
       setDoubanData([]);
       setHasMore(true);
       setIsLoadingMore(false);
+      loadMoreLockRef.current = false;
       setMultiLevelValues(values);
     },
     [multiLevelValues],
@@ -914,6 +924,7 @@ function DoubanPageClient() {
       setSourceData([]); // 清空源数据
       setHasMore(true);
       setIsLoadingMore(false);
+      loadMoreLockRef.current = false;
       setSelectedSourceCategory(null); // 清除旧分类ID，防止污染
       setFilteredSourceCategories([]); // 清空过滤后分类列表
       setIsLoadingSourceData(false);
@@ -1072,6 +1083,7 @@ function DoubanPageClient() {
         setSourceData([]);
         setHasMore(true);
         setIsLoadingMore(false);
+        loadMoreLockRef.current = false;
         setSelectedSourceCategory(category);
         // 触发源分类数据加载
         fetchSourceCategoryData(category);
@@ -1176,9 +1188,10 @@ function DoubanPageClient() {
             </div>
           ) : currentSource !== 'auto' && sourceData.length > 0 ? (
             <VirtualizedVideoGrid
+              mode='always'
               data={sourceData}
               virtualizationThreshold={60}
-              overscan={640}
+              overscan={GRID_OVERSCAN}
               className='justify-start grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'
               itemKey={(item) =>
                 `source-${item.id || item.title}-${item.year || ''}`
@@ -1204,10 +1217,10 @@ function DoubanPageClient() {
             </div>
           ) : (
             <VirtualizedVideoGrid
-              mode='auto'
+              mode='always'
               data={doubanData}
               virtualizationThreshold={60}
-              overscan={640}
+              overscan={GRID_OVERSCAN}
               onEndReached={handleGridEndReached}
               hasMore={hasMore}
               isLoadingMore={isLoadingMore || loading}

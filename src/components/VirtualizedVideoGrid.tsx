@@ -21,11 +21,11 @@ interface VirtualizedVideoGridProps<T> {
 
 function getAdaptiveOverscan(overscan?: number): number {
   if (typeof overscan === 'number' && Number.isFinite(overscan)) {
-    return Math.min(Math.max(Math.round(overscan), 420), 1800);
+    return Math.min(Math.max(Math.round(overscan), 900), 3600);
   }
 
   if (typeof navigator === 'undefined') {
-    return 900;
+    return 1600;
   }
 
   const deviceMemory = (navigator as { deviceMemory?: number } | undefined)
@@ -33,14 +33,14 @@ function getAdaptiveOverscan(overscan?: number): number {
 
   if (typeof deviceMemory === 'number') {
     if (deviceMemory <= 4) {
-      return 620;
+      return 1500;
     }
     if (deviceMemory <= 8) {
-      return 820;
+      return 1800;
     }
   }
 
-  return 980;
+  return 2200;
 }
 
 function resolveItemId(item: unknown): string | null {
@@ -115,7 +115,7 @@ export default function VirtualizedVideoGrid<T>({
     }
 
     return (
-      <div className='flex min-h-15 w-full items-center justify-center py-4'>
+      <div className='flex min-h-20 w-full items-center justify-center py-4'>
         {isLoadingMore ? (
           <span
             className='inline-block h-5 w-5 animate-spin rounded-full border-2 border-slate-500/50 border-t-emerald-300'

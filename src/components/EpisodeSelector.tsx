@@ -563,6 +563,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                             <img
                               src={processImageUrl(source.poster)}
                               alt={source.title}
+                              decoding='async'
                               className='w-full h-full object-cover'
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;

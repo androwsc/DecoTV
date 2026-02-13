@@ -587,7 +587,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           - 解决用户反馈"点击无反应"的体验问题
         */}
         <div
-          className='group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-150 ease-out hover:shadow-sm hover:shadow-black/20 hover:z-500 active:scale-95 active:opacity-80'
+          className='group relative w-full rounded-lg bg-black/5 dark:bg-black/10 cursor-pointer transition-all duration-150 ease-out hover:bg-black/10 dark:hover:bg-black/20 hover:z-500 active:scale-95 active:opacity-80'
           onClick={handleClick}
           {...longPressProps}
           style={
@@ -822,7 +822,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
               actualYear !== 'unknown' &&
               actualYear.trim() !== '' && (
                 <div
-                  className='absolute top-2 bg-black/75 text-white text-xs font-medium px-2 py-1 rounded shadow-sm transition-all duration-300 ease-out group-hover:opacity-90 left-2'
+                  className='absolute top-2 bg-black/75 text-white text-xs font-medium px-2 py-1 rounded transition-all duration-300 ease-out group-hover:opacity-90 left-2'
                   style={
                     {
                       WebkitUserSelect: 'none',
@@ -845,7 +845,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
             {/* 集数角标 - Netflix/LunaTV 风格 */}
             {actualEpisodes && actualEpisodes > 1 && (
               <div
-                className='absolute top-2 right-2 flex items-stretch overflow-hidden rounded-md shadow-lg transition-all duration-300 ease-out group-hover:scale-105'
+                className='absolute top-2 right-2 flex items-stretch overflow-hidden rounded-md transition-all duration-300 ease-out group-hover:scale-105'
                 style={
                   {
                     WebkitUserSelect: 'none',
@@ -905,7 +905,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
                   }}
                 >
                   <div
-                    className='bg-green-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow-md hover:bg-green-600 hover:scale-[1.1] transition-all duration-300 ease-out'
+                    className='bg-green-500/95 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center hover:bg-green-600/95 hover:scale-[1.1] transition-all duration-300 ease-out'
                     style={
                       {
                         WebkitUserSelect: 'none',
@@ -967,7 +967,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
                       }
                     >
                       <div
-                        className='bg-gray-700 text-white text-xs font-bold w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shadow-md hover:bg-gray-600 hover:scale-[1.1] transition-all duration-300 ease-out cursor-pointer'
+                        className='bg-gray-700/95 text-white text-xs font-bold w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center hover:bg-gray-600/95 hover:scale-[1.1] transition-all duration-300 ease-out cursor-pointer'
                         style={
                           {
                             WebkitUserSelect: 'none',
@@ -1032,7 +1032,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
                             }}
                           >
                             <div
-                              className='bg-gray-800/95 text-white text-xs sm:text-xs rounded-lg shadow-lg border border-white/10 p-1.5 sm:p-2 min-w-25 sm:min-w-30 max-w-35 sm:max-w-50 overflow-hidden'
+                              className='bg-gray-800/95 text-white text-xs sm:text-xs rounded-lg border border-white/10 p-1.5 sm:p-2 min-w-25 sm:min-w-30 max-w-35 sm:max-w-50 overflow-hidden'
                               style={
                                 {
                                   WebkitUserSelect: 'none',
@@ -1163,7 +1163,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
               </span>
               {/* 自定义 tooltip */}
               <div
-                className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible peer-hover:opacity-100 peer-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none'
+                className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md border border-white/10 opacity-0 invisible peer-hover:opacity-100 peer-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none'
                 style={
                   {
                     WebkitUserSelect: 'none',
